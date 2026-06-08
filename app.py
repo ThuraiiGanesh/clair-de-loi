@@ -336,5 +336,6 @@ if __name__ == '__main__':
         import subprocess
         subprocess.run(['python', 'init_db.py'], check=True)
 
-    print("Starting Flask web server on http://localhost:3000...")
-    app.run(host='0.0.0.0', port=3000, debug=True)
+    port = int(os.environ.get('PORT', 3000))
+    print(f"Starting Flask web server on http://0.0.0.0:{port}...")
+    app.run(host='0.0.0.0', port=port, debug=True)

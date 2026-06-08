@@ -1,0 +1,333 @@
+================================================================================
+  CLAIR DE LOI — COMPLETE WEBSITE BUILD PROMPT
+  Full specification of all pages, features, design, and functionality
+================================================================================
+
+PROJECT NAME: Clair De Loi Singapore
+TYPE: Editorial legal discourse website
+TECH STACK: React, Tailwind CSS, Framer Motion, TanStack Query, Base44 SDK
+
+================================================================================
+1. DESIGN SYSTEM & BRANDING
+================================================================================
+
+FONTS:
+- Headings: Playfair Display (serif) — Google Fonts
+- Body: Inter (sans-serif) — Google Fonts
+
+COLOR PALETTE:
+- Parchment (background): #F9F7F2
+- Ink (text): #1A1A1A
+- Crimson (accent): #BC1E22
+- White: #FFFFFF
+- Muted/border tones: warm greys
+
+DESIGN TOKENS (index.css):
+- --font-heading: 'Playfair Display', serif
+- --font-body: 'Inter', sans-serif
+- --primary: crimson (HSL 358 74% 43%)
+- --background: parchment (HSL 36 33% 97%)
+- --foreground: near-black (HSL 0 0% 10%)
+- --border: HSL 30 15% 88%
+
+VISUAL STYLE:
+- Editorial magazine aesthetic inspired by Maju.sg
+- Minimal, clean, high whitespace
+- Sharp edges (rounded-none buttons, square cards)
+- Crimson accent used sparingly as a punctuation mark
+- Thin 1px crimson/muted horizontal rule dividers
+- All-caps, widely-tracked labels using font-body
+- Playfair Display headings, often with italic crimson spans
+- Framer Motion scroll-triggered and entrance animations on all sections
+- Responsive: mobile-first, breakpoints at md and lg
+
+================================================================================
+2. GLOBAL LAYOUT (SiteLayout + Header + Footer)
+================================================================================
+
+SITE LAYOUT (components/layout/SiteLayout.jsx):
+- Wraps all public pages via React Router <Outlet>
+- Full-height flex column: Header → main content → Footer
+- Background: parchment
+
+HEADER (components/layout/Header.jsx):
+- Fixed, top-0, z-50
+- Transparent on load → parchment/95 with backdrop blur when scrolled past 40px
+- Logo: Clair De Loi logo image, shrinks slightly on scroll
+- Desktop nav: Home, Our Mission, Articles, Contact Us
+  - Active link: crimson color with full-width underline
+  - Hover: crimson color with animated underline growing from left
+  - Font: font-body, uppercase, tracked
+- Mobile: hamburger menu icon (Menu/X from lucide-react)
+  - Full-screen animated overlay with large Playfair Display nav links
+  - Overlay background: parchment, links stagger in with framer-motion
+- Bottom border: thin crimson/20 1px line
+
+FOOTER (components/layout/Footer.jsx):
+- Background: crimson (#BC1E22)
+- 3-column grid: Brand | Navigate | Follow Us
+- Brand: logo (brightness-0 invert to white), mission tagline in white/70
+  - Tagline: "Ubi societas ibi ius." + explanation of Clair De Loi mission
+- Navigate: links to Home, Our Mission, Articles, Contact Us (white/70 → white hover)
+- Follow Us: Instagram icon (Lucide) + LinkedIn icon (Lucide) with labels
+  - Links open in new tab with rel="noopener noreferrer"
+- Bottom bar: © {year} Clair De Loi. All rights reserved. (white/50, centered)
+
+LOGO URL:
+https://media.base44.com/images/public/user_69f5970e46da90d039d8c527/808d1a7a2_ClairDeLoiLogo.jpeg
+
+================================================================================
+3. DATABASE ENTITY: Article
+================================================================================
+
+Entity name: Article
+Fields:
+- title (string, required) — Article headline
+- slug (string) — URL-friendly slug, auto-generated from title
+- excerpt (string) — Short summary
+- content (string) — Full HTML content (rich text / WYSIWYG)
+- category (enum: legal_insights | opinion | case_study | news | explainer)
+- cover_image_url (string) — Cover image URL (uploaded file)
+- video_url (string) — Optional embed URL (YouTube, Vimeo)
+- instagram_link (string) — Link to related Instagram post
+- author (string) — Author name
+- is_featured (boolean, default false) — Shows in featured slot on homepage
+- is_published (boolean, default false) — Controls public visibility
+- published_date (date string) — Display date
+
+================================================================================
+4. PUBLIC PAGES
+================================================================================
+
+--- 4A. HOME PAGE (pages/Home.jsx) ---
+
+Data: Fetch all published articles (is_published: true), sorted by -published_date
+Featured article = first article where is_featured=true, fallback to first article
+Rest = remaining published articles (up to 6)
+
+SECTIONS:
+
+1. HERO (full-viewport, 85vh min):
+   - Full-bleed background image (editorial atmospheric photo)
+   - Dark gradient overlay: from-ink/80 via-ink/50 to-transparent (left to right)
+   - Content left-aligned, max-w-xl
+   - Thin crimson 1px line divider before heading
+   - Heading: "Illuminating the Law, One Story at a Time." (white, Playfair Display, 4xl–6xl)
+   - Subheading body text: mission statement in white/70
+   - CTA button: "Explore Articles →" — crimson background, white text, uppercase tracked, links to /articles
+   - Entrance animation: fade + slide up (framer-motion)
+
+2. FEATURED ARTICLE (if exists):
+   - Section title: "Featured" with crimson/20 horizontal rule extending right
+   - Uses <ArticleCard featured /> in a full-width layout (16/9 image ratio)
+
+3. LATEST ARTICLES (if any non-featured articles):
+   - Section title: "Latest" + "View All" link to /articles
+   - 3-column grid (1 col mobile, 2 col md, 3 col lg)
+   - Uses <ArticleCard /> for each
+
+4. INSTAGRAM FEED (if any articles have instagram_link):
+   - Section: "From Our Instagram"
+   - Mosaic grid of article cover images (2–4 col responsive)
+   - Each tile links to article.instagram_link (new tab)
+   - Hover: image dims + overlay with title + ExternalLink icon
+   - Footer link: "Follow us on Instagram" → https://www.instagram.com/clairdeloi
+
+5. EMPTY STATE (if no published articles):
+   - "Coming Soon" heading + message
+
+ARTICLE CARD COMPONENT (components/articles/ArticleCard.jsx):
+- Used on Home, Articles pages
+- Link to /article/{article.id}
+- Image: aspect-4/3 (standard) or 16/9 (featured), cover-fit, scale-down on group-hover
+- Category badge: crimson background, white text, uppercase tracked, absolute top-left over image
+- CDL placeholder if no cover image: crimson/10 gradient with "CDL" text
+- Below image: date + author (separated by crimson/30 vertical line), Playfair heading, excerpt (line-clamp-2)
+- "Read More" label + animated crimson underline growing on hover
+
+--- 4B. ARTICLES PAGE (pages/Articles.jsx) ---
+
+Data: All published articles, sorted by -published_date (up to 50)
+
+SECTIONS:
+
+1. PAGE HEADER:
+   - Thin crimson 1px line
+   - Heading: "The Archive" with "Archive" in italic crimson
+   - Subtitle: descriptive copy about the collection
+   - Category filter pills below (all | legal_insights | opinion | case_study | news | explainer)
+     - Active: crimson bg + white text
+     - Inactive: parchment bg + ink text, hover crimson
+
+2. ARTICLES GRID:
+   - Responsive 3-column grid of ArticleCards
+   - Loading spinner (crimson border-t spinner)
+   - Empty state message if no articles in category
+
+--- 4C. ARTICLE VIEW PAGE (pages/ArticleView.jsx) ---
+
+Route: /article/:id
+Data: Fetch article by ID
+
+FEATURES:
+- Reading progress bar: fixed top, crimson, 2px height, z-60, width % = scroll progress
+- Cover image: full-width, 21/9 aspect ratio, max 500px height
+- "Back to Articles" link with ArrowLeft icon
+- Category label (uppercase crimson tracked)
+- Heading: large Playfair Display, 3xl–5xl
+- Meta: published date + author (separated by crimson/30 divider)
+- Thin crimson/15 full-width separator
+- Optional video embed: full-width iframe, 16/9 aspect ratio
+- Article content: rendered as HTML via dangerouslySetInnerHTML
+  - Prose styles: headings in Playfair, body text ink/80, 1.8 line-height
+  - Crimson links, crimson blockquote border
+- If instagram_link: "Social Footprint" section with crimson CTA button → view on Instagram
+
+--- 4D. MISSION PAGE (pages/Mission.jsx) ---
+
+SECTIONS:
+
+1. HERO:
+   - Background: white with giant "CLARITY" text at 3% opacity (watermark effect)
+   - Heading: "Our Mission" with "Mission" italic crimson
+   - Mission statement paragraph (improve legal literacy, help aspiring lawyers)
+
+2. CORE VALUES (3-column grid):
+   - Clarity: translate legal complexity into accessible language
+   - Integrity: thorough research, balanced perspectives
+   - Impact: informed citizens create better societies
+   - Each: thin crimson 1px line, Playfair heading, muted body text
+   - Scroll-triggered stagger animations
+
+3. BRAND QUOTE:
+   - Large crimson " (opening quote mark)
+   - Italic Playfair blockquote: "The law is reason, free from passion. It is through clarity that we find justice."
+   - Crimson divider
+   - "— Clair De Loi" label (uppercase, tracked, muted)
+
+--- 4E. CONTACT PAGE (pages/Contact.jsx) ---
+
+SECTIONS:
+
+1. HEADER:
+   - Heading: "Get in Touch" with "Touch" italic crimson
+   - Subtitle copy
+
+2. CONTACT LAYOUT (5-column grid, form takes 3, info takes 2):
+   FORM FIELDS:
+   - Name (required), Email (required): side by side on md+
+   - Subject (optional)
+   - Message (required, textarea, min 180px)
+   - "Send Message" button: crimson, uppercase tracked, full crimson on hover, Send icon
+   - All inputs: sharp (rounded-none), bg-white, h-12
+   - Toast notification on success/error
+
+   INFO PANEL:
+   - Email: clairdeloisingapore@gmail.com
+   - Follow Us: Instagram link + LinkedIn link (hover → crimson)
+
+================================================================================
+5. ADMIN PANEL (protected, /admin routes)
+================================================================================
+
+ADMIN LAYOUT (pages/admin/AdminLayout.jsx):
+- Left sidebar (hidden on mobile): white, border-right
+  - Logo + "Clair De Loi / Admin" header
+  - Nav links: Dashboard (/admin), Articles (/admin/articles) — icon + label
+  - Active: crimson/10 bg + crimson text
+  - Bottom: "Back to Site" link with LogOut icon
+- Mobile: top bar with logo + icon nav links
+- Main content area: <Outlet /> with generous padding
+
+ADMIN DASHBOARD (pages/admin/AdminDashboard.jsx):
+- Welcome heading: "Dashboard"
+- Stats grid (2 col mobile, 4 col desktop):
+  - Total Articles, Published, Featured, IG Linked
+  - Each card: icon + large number + label
+- Recent Articles list (last 5):
+  - Thumbnail, title, category, published/draft badge
+  - Clicking an article → /admin/articles?edit={id}
+  - "View All" link → /admin/articles
+
+ADMIN ARTICLES (pages/admin/AdminArticles.jsx):
+- List view: ArticleList component
+  - Thumbnail, title, featured star, category, date, IG indicator
+  - Published (green) / Draft (muted) badge
+  - Edit (pencil icon) and Delete (trash icon with AlertDialog confirmation) actions
+- Editor view: ArticleEditor component (toggles on edit/new)
+- "New Article" button → opens editor in create mode
+- URL param: ?edit={id} auto-opens editor for that article
+
+ARTICLE EDITOR (components/admin/ArticleEditor.jsx):
+- 2-column layout: main content (2/3) + sidebar settings (1/3)
+- MAIN CONTENT:
+  - Title input (large, Playfair font)
+  - Excerpt textarea
+  - Rich text editor: ReactQuill with toolbar (headings, bold, italic, underline, blockquote, lists, link, image, clean)
+- SIDEBAR:
+  - Cover image: upload via file input → Base44 UploadFile integration, preview with remove button
+  - Category select (Legal Insights, Opinion, Case Study, News, Explainer)
+  - Author text input
+  - Publish date picker (type=date)
+  - Published toggle (Switch)
+  - Featured toggle (Switch)
+  - Instagram link input
+  - Video URL (embed) input
+- Header: Back arrow, article title, Save button (crimson, uppercase)
+- Auto-generates slug from title (lowercase, hyphens)
+
+================================================================================
+6. ROUTING (App.jsx)
+================================================================================
+
+PUBLIC ROUTES (wrapped in SiteLayout):
+  / → Home
+  /articles → Articles
+  /article/:id → ArticleView
+  /mission → Mission
+  /contact → Contact
+
+ADMIN ROUTES (wrapped in AdminLayout):
+  /admin → AdminDashboard
+  /admin/articles → AdminArticles
+
+* → PageNotFound (branded: parchment bg, crimson 404, crimson CTA button)
+
+================================================================================
+7. ADDITIONAL TECHNICAL NOTES
+================================================================================
+
+- Authentication: handled by Base44 platform (no custom login page needed)
+- Data fetching: TanStack Query (useQuery, useMutation, queryClient.invalidateQueries)
+- All article filtering by is_published=true for public pages
+- Admin pages fetch all articles regardless of publish status
+- Page title: "Clair De Loi" (set in index.html)
+- Meta description: "Illuminating the law, one story at a time. Editorial excellence in legal discourse."
+- Favicon: Clair De Loi logo JPEG
+- Icons: Lucide React only (no inline SVGs — causes SVGAnimatedString cloning errors)
+- Custom scrollbar: 6px, crimson thumb
+- Rich text editor global CSS overrides: Quill toolbar and container border-colors match design system
+- Reading progress bar: scroll event listener, calculated as scrollY / (scrollHeight - innerHeight) * 100
+
+================================================================================
+8. SAMPLE CONTENT (3 seed articles)
+================================================================================
+
+1. Title: "Understanding Contract Law: A Beginner's Guide"
+   Category: Explainer | Featured: true | Published: true
+   Cover: editorial photo of brass balance scale
+   Content: Explains offer, acceptance, consideration, intention to create legal relations
+
+2. Title: "The Evolving Landscape of Digital Privacy Rights"
+   Category: Legal Insights | Featured: false | Published: true
+   Cover: editorial library corridor photo
+   Content: GDPR, PDPA, right to be forgotten, AI and consent
+
+3. Title: "Opinion: Why Legal Literacy Should Be Taught in Schools"
+   Category: Opinion | Featured: false | Published: true
+   Cover: editorial fountain pen on legal document
+   Content: Case for integrating legal education in secondary curricula
+
+================================================================================
+END OF PROMPT
+================================================================================

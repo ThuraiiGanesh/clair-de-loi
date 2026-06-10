@@ -256,6 +256,165 @@ def get_contacts():
     conn.close()
     return jsonify([dict(m) for m in messages])
 
+# ─── QUIZ API ──────────────────────────────────────────────────────
+@app.route('/api/quiz', methods=['GET'])
+def get_quiz_questions():
+    difficulty = request.args.get('difficulty', 'medium')
+    conn = get_db()
+    questions = conn.execute(
+        "SELECT * FROM quiz_questions WHERE difficulty = ? ORDER BY id",
+        (difficulty,)
+    ).fetchall()
+    conn.close()
+    result = []
+    for q in questions:
+        d = dict(q)
+        d['options'] = json.loads(d['options']) if isinstance(d['options'], str) else d['options']
+        result.append(d)
+    return jsonify(result)
+
+@app.route('/api/quiz/admin', methods=['GET'])
+@login_required
+def get_quiz_admin():
+    conn = get_db()
+    questions = conn.execute("SELECT * FROM quiz_questions ORDER BY difficulty, id").fetchall()
+    conn.close()
+    result = []
+    for q in questions:
+        d = dict(q)
+        d['options'] = json.loads(d['options']) if isinstance(d['options'], str) else d['options']
+        result.append(d)
+    return jsonify(result)
+
+@app.route('/api/quiz/admin', methods=['POST'])
+@login_required
+def create_quiz_question():
+    data = request.json or {}
+    text = data.get('text', '').strip()
+    difficulty = data.get('difficulty', 'medium')
+    explanation = data.get('explanation', '').strip()
+    recommendation_article_id = data.get('recommendation_article_id', '').strip() or None
+    options = data.get('options', [])
+    correct_answer = data.get('correct_answer', 0)
+
+    if not text or len(options) < 2:
+        return jsonify({'error': 'Question text and at least 2 options are required'}), 400
+    if difficulty not in ('easy', 'medium', 'hard'):
+        return jsonify({'error': 'Difficulty must be easy, medium, or hard'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """INSERT INTO quiz_questions (text, difficulty, explanation, recommendation_article_id, options, correct_answer)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (text, difficulty, explanation, recommendation_article_id, json.dumps(options), correct_answer)
+    )
+    conn.commit()
+    new_id = cursor.lastrowid
+    question = conn.execute("SELECT * FROM quiz_questions WHERE id = ?", (new_id,)).fetchone()
+    conn.close()
+    d = dict(question)
+    d['options'] = json.loads(d['options']) if isinstance(d['options'], str) else d['options']
+    return jsonify(d), 201
+
+@app.route('/api/quiz/admin/<int:id>', methods=['PUT'])
+@login_required
+def update_quiz_question(id):
+    data = request.json or {}
+    conn = get_db()
+    existing = conn.execute("SELECT id FROM quiz_questions WHERE id = ?", (id,)).fetchone()
+    if not existing:
+        conn.close()
+        return jsonify({'error': 'Question not found'}), 404
+
+    text = data.get('text', '').strip()
+    difficulty = data.get('difficulty', 'medium')
+    explanation = data.get('explanation', '').strip()
+    recommendation_article_id = data.get('recommendation_article_id', '').strip() or None
+    options = data.get('options', [])
+    correct_answer = data.get('correct_answer', 0)
+
+    conn.execute(
+        """UPDATE quiz_questions SET text = ?, difficulty = ?, explanation = ?, recommendation_article_id = ?, options = ?, correct_answer = ?
+           WHERE id = ?""",
+        (text, difficulty, explanation, recommendation_article_id, json.dumps(options), correct_answer, id)
+    )
+    conn.commit()
+    question = conn.execute("SELECT * FROM quiz_questions WHERE id = ?", (id,)).fetchone()
+    conn.close()
+    d = dict(question)
+    d['options'] = json.loads(d['options']) if isinstance(d['options'], str) else d['options']
+    return jsonify(d)
+
+@app.route('/api/quiz/admin/<int:id>', methods=['DELETE'])
+@login_required
+def delete_quiz_question(id):
+    conn = get_db()
+    existing = conn.execute("SELECT id FROM quiz_questions WHERE id = ?", (id,)).fetchone()
+    if not existing:
+        conn.close()
+        return jsonify({'error': 'Question not found'}), 404
+    conn.execute("DELETE FROM quiz_questions WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'Question deleted'})
+
+# ─── BULK ARTICLE OPERATIONS ──────────────────────────────────────
+@app.route('/api/articles/bulk', methods=['POST'])
+@login_required
+def bulk_articles():
+    data = request.json or {}
+    action = data.get('action', '')
+    ids = data.get('ids', [])
+
+    if not ids or not action:
+        return jsonify({'error': 'Action and IDs are required'}), 400
+
+    conn = get_db()
+    placeholders = ','.join(['?'] * len(ids))
+
+    if action == 'publish':
+        conn.execute(f"UPDATE articles SET is_published = 1 WHERE id IN ({placeholders})", ids)
+    elif action == 'unpublish':
+        conn.execute(f"UPDATE articles SET is_published = 0 WHERE id IN ({placeholders})", ids)
+    elif action == 'delete':
+        conn.execute(f"DELETE FROM articles WHERE id IN ({placeholders})", ids)
+    else:
+        conn.close()
+        return jsonify({'error': 'Invalid action. Use publish, unpublish, or delete.'}), 400
+
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': f'Bulk {action} completed for {len(ids)} articles'})
+
+# ─── ADMIN STATS API ──────────────────────────────────────────────
+@app.route('/api/admin/stats', methods=['GET'])
+@login_required
+def get_admin_stats():
+    conn = get_db()
+    articles = conn.execute("SELECT category, is_published, is_featured, instagram_link FROM articles").fetchall()
+    contacts = conn.execute("SELECT created_at FROM contacts ORDER BY created_at DESC").fetchall()
+    quiz_count = conn.execute("SELECT COUNT(*) FROM quiz_questions").fetchone()[0]
+    conn.close()
+
+    # Category distribution
+    cat_counts = {}
+    for a in articles:
+        cat = a['category']
+        cat_counts[cat] = cat_counts.get(cat, 0) + 1
+
+    return jsonify({
+        'articles': {
+            'total': len(articles),
+            'published': sum(1 for a in articles if a['is_published']),
+            'featured': sum(1 for a in articles if a['is_featured']),
+            'ig_linked': sum(1 for a in articles if a['instagram_link'])
+        },
+        'categories': cat_counts,
+        'contacts_total': len(contacts),
+        'quiz_questions_total': quiz_count
+    })
+
 # ─── CHATBOT GEMINI PROXY API ──────────────────────────────────────
 def get_mock_reply(user_message):
     msg = user_message.lower()

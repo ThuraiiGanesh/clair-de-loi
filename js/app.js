@@ -5,7 +5,7 @@
 import { Router, ArticleStore, initAnimations, showToast } from './utils.js';
 import { renderHeader, renderFooter, bindHeaderEvents } from './ui.js';
 import { HomePage, MissionPage, ArticlesPage, ArticleViewPage, ContactPage, LinksPage, NotFoundPage, QuizPage } from './pages.js';
-import { AdminLoginPage, AdminDashboardPage, AdminArticlesPage, renderAdminLayout } from './admin.js';
+import { AdminLoginPage, AdminDashboardPage, AdminArticlesPage, AdminQuizPage, renderAdminLayout } from './admin.js';
 import { initChatbot } from './chatbot.js';
 
 // ─── INITIALIZATION ──────────────────────────────────────────────
@@ -29,6 +29,7 @@ router.add('/links', () => LinksPage(store), { layout: 'none' });
 router.add('/admin/login', () => AdminLoginPage(store, router), { layout: 'none' });
 router.add('/admin', () => AdminDashboardPage(store), { layout: 'admin' });
 router.add('/admin/articles', () => AdminArticlesPage(store, router), { layout: 'admin' });
+router.add('/admin/quiz', () => AdminQuizPage(store, router), { layout: 'admin' });
 
 // 404
 router.setNotFound(() => NotFoundPage());
@@ -109,6 +110,7 @@ function updateTitle(path) {
     '/links': 'Links — Clair De Loi',
     '/admin': 'Dashboard — Clair De Loi Admin',
     '/admin/articles': 'Articles — Clair De Loi Admin',
+    '/admin/quiz': 'Quiz Manager — Clair De Loi Admin',
     '/admin/login': 'Admin Login — Clair De Loi'
   };
 

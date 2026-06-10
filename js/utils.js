@@ -473,6 +473,78 @@ export class ArticleStore {
       igLinked: all.filter(a => !!a.instagram_link).length
     };
   }
+
+  // ─── QUIZ MANAGEMENT ────────────────────────────────────────────
+  async loadQuiz(difficulty = null) {
+    try {
+      const url = difficulty ? `/api/quiz?difficulty=${difficulty}` : '/api/quiz/admin';
+      const res = await fetch(url);
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.warn("Failed to load quiz questions from backend.", e);
+    }
+    return [];
+  }
+
+  async createQuiz(data) {
+    try {
+      const res = await fetch('/api/quiz/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create question');
+    } catch (e) {
+      console.error("Create quiz question failed:", e);
+      throw e;
+    }
+  }
+
+  async updateQuiz(id, data) {
+    try {
+      const res = await fetch(`/api/quiz/admin/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update question');
+    } catch (e) {
+      console.error("Update quiz question failed:", e);
+      throw e;
+    }
+  }
+
+  async deleteQuiz(id) {
+    try {
+      const res = await fetch(`/api/quiz/admin/${id}`, { method: 'DELETE' });
+      if (res.ok) return true;
+    } catch (e) {
+      console.error("Delete quiz question failed:", e);
+    }
+    return false;
+  }
+
+  // ─── BULK OPERATIONS ────────────────────────────────────────────
+  async bulkAction(action, ids) {
+    try {
+      const res = await fetch('/api/articles/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ids })
+      });
+      if (res.ok) {
+        await this.load();
+        return true;
+      }
+    } catch (e) {
+      console.error("Bulk action failed:", e);
+    }
+    return false;
+  }
 }
 
 export const TRANSLATIONS = {
@@ -509,6 +581,7 @@ export const TRANSLATIONS = {
               val_impact: 'Impact',
               val_impact_sub: 'Informed citizens create better societies. We believe that spreading legal literacy empowers individuals to exercise their rights and fulfil their responsibilities.',
               quote_text: '"The law is reason, free from passion. It is through clarity that we find justice."',
+              quote_author: 'Aristotle',
               contact_title: 'Get in <span class="crimson-italic">Touch</span>',
               contact_sub: 'Have a question, collaboration idea, or simply want to connect? We\'d love to hear from you.',
               name: 'Name',
@@ -593,7 +666,18 @@ export const TRANSLATIONS = {
               q5_o1: 'The Executive (Cabinet & Prime Minister)',
               q5_o2: 'The Legislature (Parliament)',
               q5_o3: 'The Judiciary (Supreme Court & State Courts)',
-              q5_exp: 'Under the principle of separation of powers, the Judiciary is responsible for interpreting the law and administering justice, independent of the Executive (government administration) and the Legislature (law-making body).'
+              q5_exp: 'Under the principle of separation of powers, the Judiciary is responsible for interpreting the law and administering justice, independent of the Executive (government administration) and the Legislature (law-making body).',
+
+              // Quiz Difficulty
+              quiz_select_difficulty: 'Select Difficulty',
+              quiz_difficulty_desc: 'Choose your challenge level. Questions adapt to your selection.',
+              quiz_easy: 'Easy',
+              quiz_easy_desc: 'Basic legal concepts and terminology',
+              quiz_medium: 'Medium',
+              quiz_medium_desc: 'Applied legal knowledge and reasoning',
+              quiz_hard: 'Hard',
+              quiz_hard_desc: 'Advanced case law and nuanced principles',
+              quiz_questions_count: 'questions'
             },
             zh: {
               home: '首页',
@@ -628,6 +712,7 @@ export const TRANSLATIONS = {
               val_impact: '社会影响',
               val_impact_sub: '知情公民创造美好社会。我们相信，普及法律素养能赋能个人行使权利并履行义务。',
               quote_text: '“法律是免除激情的理性。唯有透过清晰，我们方能寻得正义。”',
+              quote_author: '亚里士多德',
               contact_title: '与我们<span class="crimson-italic">联络</span>',
               contact_sub: '有任何疑问、反馈或有志于加入我们？欢迎给我们留言。',
               name: '姓名',
@@ -747,6 +832,7 @@ export const TRANSLATIONS = {
               val_impact: 'Impak',
               val_impact_sub: 'Masyarakat berpengetahuan membina negara yang lebih baik. Kami percaya literasi undang-undang memperkasa individu untuk menuntut hak dan melaksanakan tanggungjawab mereka.',
               quote_text: '"Undang-undang adalah akal, bebas daripada keghairahan. Melalui kejelasanlah kita menemui keadilan."',
+              quote_author: 'Aristotle',
               contact_title: 'Hubungi <span class="crimson-italic">Kami</span>',
               contact_sub: 'Mempunyai soalan, idea kolaborasi, atau sekadar ingin berhubung? Kami sentiasa bersedia mendengar daripada anda.',
               name: 'Nama',
@@ -866,6 +952,7 @@ export const TRANSLATIONS = {
               val_impact: 'தாக்கம்',
               val_impact_sub: 'அறிவார்ந்த குடிமக்கள் சிறந்த சமூகத்தை உருவாக்குகிறார்கள். சட்ட அறிவைப் பரப்புவது தனிநபர்கள் தங்கள் உரிமைகளைப் பயன்படுத்தவும் கடமைகளை நிறைவேற்றவும் அதிகாரம் அளிக்கும் என்று நம்புகிறோம்.',
               quote_text: '"சட்டம் என்பது உணர்ச்சியற்ற பகுத்தறிவு ஆகும். தெளிவின் மூலமே நமக்கு நீதி கிடைக்கிறது."',
+              quote_author: 'அரிஸ்டாட்டில்',
               contact_title: 'தொடர்பு <span class="crimson-italic">கொள்ளுங்கள்</span>',
               contact_sub: 'கேள்விகள், கூட்டுப்பணி யோசனைகள் அல்லது தொடர்பு கொள்ள வேண்டுமா? உங்களிடமிருந்து கேட்க நாங்கள் விரும்புகிறோம்.',
               name: 'பெயர்',

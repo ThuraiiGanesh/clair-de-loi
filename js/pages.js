@@ -168,7 +168,7 @@ export function MissionPage() {
         <div class="brand-quote-mark">"</div>
         <blockquote>${t('quote_text')}</blockquote>
         <div style="width:60px;height:2px;background:var(--crimson);margin:1.5rem auto;"></div>
-        <p class="brand-quote-attr">— Clair De Loi</p>
+        <p class="brand-quote-attr">— ${t('quote_author')}</p>
       </div>
     </section>
   `;
@@ -614,64 +614,6 @@ export function NotFoundPage() {
 
 
 // ─── LEGAL LITERACY QUIZ PAGE ────────────────────────────────────
-const QUESTIONS = [
-  {
-    id: 1,
-    textKey: 'q1_text',
-    options: [
-      { key: 'q1_o1', isCorrect: false },
-      { key: 'q1_o2', isCorrect: true },
-      { key: 'q1_o3', isCorrect: false }
-    ],
-    expKey: 'q1_exp',
-    recommendation: 'art-seed-001'
-  },
-  {
-    id: 2,
-    textKey: 'q2_text',
-    options: [
-      { key: 'q2_o1', isCorrect: false },
-      { key: 'q2_o2', isCorrect: true },
-      { key: 'q2_o3', isCorrect: false }
-    ],
-    expKey: 'q2_exp',
-    recommendation: 'art-seed-002'
-  },
-  {
-    id: 3,
-    textKey: 'q3_text',
-    options: [
-      { key: 'q3_o1', isCorrect: false },
-      { key: 'q3_o2', isCorrect: true },
-      { key: 'q3_o3', isCorrect: false }
-    ],
-    expKey: 'q3_exp',
-    recommendation: 'art-seed-003'
-  },
-  {
-    id: 4,
-    textKey: 'q4_text',
-    options: [
-      { key: 'q4_o1', isCorrect: false },
-      { key: 'q4_o2', isCorrect: true },
-      { key: 'q4_o3', isCorrect: false }
-    ],
-    expKey: 'q4_exp',
-    recommendation: 'art-seed-003'
-  },
-  {
-    id: 5,
-    textKey: 'q5_text',
-    options: [
-      { key: 'q5_o1', isCorrect: false },
-      { key: 'q5_o2', isCorrect: false },
-      { key: 'q5_o3', isCorrect: true }
-    ],
-    expKey: 'q5_exp',
-    recommendation: 'art-seed-001'
-  }
-];
-
 export function QuizPage(store) {
   const html = `
     <section class="section container" style="padding-top: calc(var(--nav-height) + 2rem); min-height: 80vh; display: flex; align-items: center; justify-content: center;">
@@ -685,9 +627,11 @@ export function QuizPage(store) {
     const wrapper = document.getElementById('quiz-wrapper');
     if (!wrapper) return;
 
-    let currentStep = 0; // 0 = welcome, 1..5 = questions, 6 = results
+    let currentStep = 0;
     let score = 0;
-    let answers = []; // tracks correctness of each question: [true, false, ...]
+    let answers = [];
+    let questions = [];
+    let selectedDifficulty = 'medium';
 
     const renderWelcome = () => {
       wrapper.innerHTML = `
@@ -696,55 +640,121 @@ export function QuizPage(store) {
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--crimson)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
           <h1 style="font-size: 2.25rem; font-family: var(--font-heading); font-weight: 700; margin-bottom: 1rem; color: var(--ink);">${t('quiz_title')}</h1>
-          <p class="quiz-intro-text" style="color: var(--ink-70); font-size: 1.05rem; margin-bottom: 2.5rem; line-height: 1.6;">${t('quiz_subtitle')}</p>
+          <p class="quiz-intro-text" style="color: var(--ink-70); font-size: 1.05rem; margin-bottom: 2rem; line-height: 1.6;">${t('quiz_subtitle')}</p>
+
+          <h3 style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 600; margin-bottom: 1.25rem; color: var(--ink);">${t('quiz_select_difficulty')}</h3>
+          <p style="color: var(--ink-50); font-size: 0.85rem; margin-bottom: 1.5rem;">${t('quiz_difficulty_desc')}</p>
+
+          <div class="quiz-difficulty-grid" id="quiz-difficulty-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 2.5rem;">
+            <button class="quiz-diff-card" data-diff="easy" style="padding: 1.25rem 0.75rem; border: 2px solid var(--warm-2); border-radius: 10px; background: var(--parchment); cursor: pointer; transition: all 0.25s var(--ease-out); text-align: center;">
+              <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🌱</div>
+              <div style="font-weight: 700; font-size: 0.9rem; color: var(--ink); margin-bottom: 0.25rem;">${t('quiz_easy')}</div>
+              <div style="font-size: 0.7rem; color: var(--ink-50); line-height: 1.3;">${t('quiz_easy_desc')}</div>
+            </button>
+            <button class="quiz-diff-card active" data-diff="medium" style="padding: 1.25rem 0.75rem; border: 2px solid var(--crimson); border-radius: 10px; background: rgba(188, 30, 34, 0.04); cursor: pointer; transition: all 0.25s var(--ease-out); text-align: center;">
+              <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚖️</div>
+              <div style="font-weight: 700; font-size: 0.9rem; color: var(--crimson); margin-bottom: 0.25rem;">${t('quiz_medium')}</div>
+              <div style="font-size: 0.7rem; color: var(--ink-50); line-height: 1.3;">${t('quiz_medium_desc')}</div>
+            </button>
+            <button class="quiz-diff-card" data-diff="hard" style="padding: 1.25rem 0.75rem; border: 2px solid var(--warm-2); border-radius: 10px; background: var(--parchment); cursor: pointer; transition: all 0.25s var(--ease-out); text-align: center;">
+              <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔥</div>
+              <div style="font-weight: 700; font-size: 0.9rem; color: var(--ink); margin-bottom: 0.25rem;">${t('quiz_hard')}</div>
+              <div style="font-size: 0.7rem; color: var(--ink-50); line-height: 1.3;">${t('quiz_hard_desc')}</div>
+            </button>
+          </div>
+
           <button class="btn btn-primary" id="btn-start-quiz" data-magnetic style="font-size: 0.85rem; padding: 1rem 2.5rem; border-radius: 999px;">
             ${t('quiz_start')} <span class="arr">→</span>
           </button>
         </div>
       `;
-      document.getElementById('btn-start-quiz').addEventListener('click', () => {
+
+      const diffGrid = document.getElementById('quiz-difficulty-grid');
+      diffGrid.addEventListener('click', (e) => {
+        const card = e.target.closest('.quiz-diff-card');
+        if (!card) return;
+        diffGrid.querySelectorAll('.quiz-diff-card').forEach(c => {
+          c.classList.remove('active');
+          c.style.borderColor = 'var(--warm-2)';
+          c.style.background = 'var(--parchment)';
+          const label = c.querySelector('div:nth-child(2)');
+          if (label) label.style.color = 'var(--ink)';
+        });
+        card.classList.add('active');
+        card.style.borderColor = 'var(--crimson)';
+        card.style.background = 'rgba(188, 30, 34, 0.04)';
+        const label = card.querySelector('div:nth-child(2)');
+        if (label) label.style.color = 'var(--crimson)';
+        selectedDifficulty = card.dataset.diff;
+      });
+
+      document.getElementById('btn-start-quiz').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-start-quiz');
+        btn.disabled = true;
+        btn.textContent = 'Loading...';
+
+        questions = await store.loadQuiz(selectedDifficulty);
+
+        if (questions.length === 0) {
+          wrapper.innerHTML = `
+            <div style="text-align:center;padding:3rem 2rem;background:var(--white);border:1px solid var(--warm-2);border-radius:12px;">
+              <h2 style="color:var(--ink);margin-bottom:1rem;">No Questions Available</h2>
+              <p style="color:var(--ink-70);margin-bottom:1.5rem;">There are no quiz questions for the <strong>${selectedDifficulty}</strong> difficulty yet.</p>
+              <button class="btn btn-primary" id="btn-go-back-quiz" style="border-radius:999px;">Go Back</button>
+            </div>
+          `;
+          document.getElementById('btn-go-back-quiz')?.addEventListener('click', () => renderWelcome());
+          return;
+        }
+
         currentStep = 1;
+        score = 0;
+        answers = [];
         renderQuestion();
       });
     };
 
     const renderQuestion = () => {
       const qIdx = currentStep - 1;
-      const q = QUESTIONS[qIdx];
-      const progressPercent = ((currentStep) / QUESTIONS.length) * 100;
+      const q = questions[qIdx];
+      const progressPercent = ((currentStep) / questions.length) * 100;
+      const diffColors = { easy: '#2d8a4e', medium: '#c9880a', hard: '#c44040' };
+      const diffColor = diffColors[selectedDifficulty] || diffColors.medium;
 
       wrapper.innerHTML = `
         <div class="quiz-question-card" style="padding: 2.5rem; background: var(--white); border: 1px solid var(--warm-2); border-radius: 12px; box-shadow: var(--shadow-md);">
-          <!-- Quiz Progress Indicator -->
           <div class="quiz-progress-bar-container" style="margin-bottom: 2rem;">
             <div style="display:flex; justify-content:space-between; font-size: 0.8rem; font-weight:600; color: var(--ink-50); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
-              <span>Question ${currentStep} of ${QUESTIONS.length}</span>
-              <span>${Math.round(progressPercent)}%</span>
+              <span>Question ${currentStep} of ${questions.length}</span>
+              <span style="display:flex;align-items:center;gap:0.4rem;">
+                <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${diffColor};"></span>
+                ${t('quiz_' + selectedDifficulty)}
+              </span>
             </div>
             <div class="quiz-progress-bar-track" style="height: 4px; background: var(--warm-1); border-radius: 999px; overflow: hidden;">
               <div class="quiz-progress-bar-fill" style="width: ${progressPercent}%; height: 100%; background: var(--crimson); transition: width 0.4s var(--ease-out);"></div>
             </div>
           </div>
           
-          <h2 class="quiz-question-text" style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 600; line-height: 1.4; color: var(--ink); margin-bottom: 2rem;">${t(q.textKey)}</h2>
+          <h2 class="quiz-question-text" style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 600; line-height: 1.4; color: var(--ink); margin-bottom: 2rem;">${q.text}</h2>
           
           <div class="quiz-options-list" id="quiz-options" style="display: flex; flex-direction: column; gap: 0.75rem;">
             ${q.options.map((opt, oIdx) => `
               <button class="quiz-option-btn" data-opt-idx="${oIdx}" style="display: flex; align-items: center; text-align: left; padding: 1.15rem 1.5rem; border: 1px solid var(--warm-2); background: var(--parchment); border-radius: 8px; font-size: 0.95rem; font-weight: 500; color: var(--ink); transition: all 0.25s var(--ease-out); cursor: pointer;">
                 <span class="quiz-option-letter" style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 1px solid var(--warm-3); border-radius: 50%; font-size: 0.75rem; font-weight: 700; margin-right: 1rem; background: var(--white); transition: all 0.2s;">${String.fromCharCode(65 + oIdx)}</span>
-                <span class="quiz-option-title" style="flex:1;">${t(opt.key)}</span>
+                <span class="quiz-option-title" style="flex:1;">${opt}</span>
               </button>
             `).join('')}
           </div>
 
           <div class="quiz-explanation-box" id="quiz-explanation" style="display:none; margin-top: 1.5rem; padding: 1.25rem 1.5rem; border-radius: 8px; border-left: 4px solid var(--warm-3); background: var(--warm-1); font-size: 0.9rem; line-height: 1.55;">
             <div class="quiz-exp-status" id="quiz-exp-status" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.5rem;"></div>
-            <p class="quiz-exp-text" style="color: var(--ink-80); margin: 0;">${t(q.expKey)}</p>
+            <p class="quiz-exp-text" style="color: var(--ink-80); margin: 0;">${q.explanation || ''}</p>
           </div>
 
           <div class="quiz-actions" style="margin-top: 2rem; display: flex; justify-content: flex-end;">
             <button class="btn btn-primary" id="btn-next-question" style="display:none;" data-magnetic>
-              ${t('quiz_next')} <span class="arr">→</span>
+              ${currentStep < questions.length ? t('quiz_next') : t('quiz_results')} <span class="arr">→</span>
             </button>
           </div>
         </div>
@@ -754,63 +764,42 @@ export function QuizPage(store) {
       const nextBtn = document.getElementById('btn-next-question');
       const expBox = document.getElementById('quiz-explanation');
       const expStatus = document.getElementById('quiz-exp-status');
-
       let answered = false;
 
       optionsDiv.addEventListener('click', (e) => {
         if (answered) return;
         const btn = e.target.closest('.quiz-option-btn');
         if (!btn) return;
-
         answered = true;
         const selectedIdx = parseInt(btn.dataset.optIdx, 10);
-        const opt = q.options[selectedIdx];
-        const isCorrect = opt.isCorrect;
+        const isCorrect = selectedIdx === q.correct_answer;
 
-        answers.push(isCorrect);
+        answers.push({ correct: isCorrect, questionId: q.id, recommendationId: q.recommendation_article_id });
         if (isCorrect) score++;
 
-        // Style updates for selected option and reveals correct option
         optionsDiv.querySelectorAll('.quiz-option-btn').forEach((b, idx) => {
-          const isBtnCorrect = q.options[idx].isCorrect;
+          const isBtnCorrect = idx === q.correct_answer;
           b.disabled = true;
-          
           if (idx === selectedIdx) {
             if (isCorrect) {
-              b.classList.add('correct');
               b.style.borderColor = 'var(--success)';
               b.style.background = 'rgba(45, 138, 78, 0.08)';
               const letter = b.querySelector('.quiz-option-letter');
-              if (letter) {
-                letter.style.background = 'var(--success)';
-                letter.style.color = 'var(--white)';
-                letter.style.borderColor = 'var(--success)';
-              }
+              if (letter) { letter.style.background = 'var(--success)'; letter.style.color = 'var(--white)'; letter.style.borderColor = 'var(--success)'; }
             } else {
-              b.classList.add('incorrect');
               b.style.borderColor = 'var(--error)';
               b.style.background = 'rgba(196, 64, 64, 0.08)';
               const letter = b.querySelector('.quiz-option-letter');
-              if (letter) {
-                letter.style.background = 'var(--error)';
-                letter.style.color = 'var(--white)';
-                letter.style.borderColor = 'var(--error)';
-              }
+              if (letter) { letter.style.background = 'var(--error)'; letter.style.color = 'var(--white)'; letter.style.borderColor = 'var(--error)'; }
             }
           } else if (isBtnCorrect) {
-            b.classList.add('correct-highlight');
             b.style.borderColor = 'var(--success)';
             b.style.background = 'rgba(45, 138, 78, 0.04)';
             const letter = b.querySelector('.quiz-option-letter');
-            if (letter) {
-              letter.style.background = 'var(--success)';
-              letter.style.color = 'var(--white)';
-              letter.style.borderColor = 'var(--success)';
-            }
+            if (letter) { letter.style.background = 'var(--success)'; letter.style.color = 'var(--white)'; letter.style.borderColor = 'var(--success)'; }
           }
         });
 
-        // Set explanation classes
         expBox.style.display = 'block';
         if (isCorrect) {
           expBox.style.borderColor = 'var(--success)';
@@ -823,131 +812,83 @@ export function QuizPage(store) {
           expStatus.style.color = 'var(--error)';
           expStatus.innerHTML = `✕ ${t('quiz_incorrect')}`;
         }
-
         nextBtn.style.display = 'inline-flex';
       });
 
       nextBtn.addEventListener('click', () => {
         currentStep++;
-        if (currentStep > QUESTIONS.length) {
-          renderResults();
-        } else {
-          renderQuestion();
-        }
+        if (currentStep > questions.length) renderResults();
+        else renderQuestion();
       });
     };
 
     const renderResults = () => {
       let rankKey = 'quiz_rank_citizen';
       let feedbackKey = 'quiz_feedback_low';
-      
-      if (score === QUESTIONS.length) {
-        rankKey = 'quiz_rank_expert';
-        feedbackKey = 'quiz_feedback_high';
-      } else if (score >= 3) {
-        rankKey = 'quiz_rank_scholar';
-        feedbackKey = 'quiz_feedback_mid';
-      }
+      if (score === questions.length) { rankKey = 'quiz_rank_expert'; feedbackKey = 'quiz_feedback_high'; }
+      else if (score >= Math.ceil(questions.length * 0.6)) { rankKey = 'quiz_rank_scholar'; feedbackKey = 'quiz_feedback_mid'; }
 
-      // Compile unique recommended article IDs
       const recommendations = [];
-      answers.forEach((correct, idx) => {
-        if (!correct) {
-          const q = QUESTIONS[idx];
-          if (q.recommendation && !recommendations.includes(q.recommendation)) {
-            recommendations.push(q.recommendation);
-          }
+      answers.forEach((ans) => {
+        if (!ans.correct && ans.recommendationId && !recommendations.includes(ans.recommendationId)) {
+          recommendations.push(ans.recommendationId);
         }
       });
-
-      // Seeding fallback if they did great
-      if (recommendations.length === 0) {
-        recommendations.push('art-seed-001');
-      }
+      if (recommendations.length === 0) recommendations.push('art-seed-001');
 
       wrapper.innerHTML = `
         <div class="quiz-results-card" style="text-align: center; padding: 3rem 2.5rem; background: var(--white); border: 1px solid var(--warm-2); border-radius: 12px; box-shadow: var(--shadow-md);">
           <h1 style="font-size: 2.25rem; font-family: var(--font-heading); margin-bottom: 1.5rem;">${t('quiz_results')}</h1>
-          
-          <div class="quiz-results-badge-wrap" style="display:flex; flex-direction:column; align-items:center; gap:1rem; margin-bottom: 2rem;">
-            <div class="quiz-score-circle" style="display:flex; align-items:center; justify-content:center; width:110px; height:110px; border-radius:50%; border:3px solid var(--crimson); font-family:var(--font-heading); font-size:1.75rem; font-weight:700;">
-              <span class="quiz-score-num" data-counter="${score}" style="font-size: 2.5rem; color: var(--crimson);">0</span>
-              <span class="quiz-score-denom" style="color: var(--ink-50); font-size: 1.25rem; margin-left: 0.25rem;">/ ${QUESTIONS.length}</span>
+          <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; margin-bottom: 2rem;">
+            <div style="display:flex; align-items:center; justify-content:center; width:110px; height:110px; border-radius:50%; border:3px solid var(--crimson); font-family:var(--font-heading);">
+              <span class="quiz-score-num" data-counter="${score}" style="font-size: 2.5rem; color: var(--crimson); font-weight:700;">0</span>
+              <span style="color: var(--ink-50); font-size: 1.25rem; margin-left: 0.25rem;">/ ${questions.length}</span>
             </div>
-            <div class="quiz-rank-label" style="font-size: 1.15rem; font-weight: 700; color: var(--ink);">${t(rankKey)}</div>
+            <div style="font-size: 1.15rem; font-weight: 700; color: var(--ink);">${t(rankKey)}</div>
+            <div style="font-size: 0.8rem; color: var(--ink-50); text-transform: uppercase; letter-spacing: 0.05em;">${t('quiz_' + selectedDifficulty)} Difficulty</div>
           </div>
-          
-          <p class="quiz-feedback-text" style="color: var(--ink-70); font-size: 1.05rem; line-height: 1.6; max-width: 480px; margin: 0 auto 2.5rem;">${t(feedbackKey)}</p>
-          
-          <div class="quiz-recommended-section" style="margin-top: 2.5rem; text-align: left;">
-            <h3 style="font-family: var(--font-heading); font-size: 1.25rem; margin-bottom: 1rem; border-bottom: 1px solid var(--warm-2); padding-bottom: 0.5rem; color: var(--ink);">
-              ${t('quiz_recommended')}
-            </h3>
-            <div class="quiz-recommended-list">
-              <div id="quiz-recommendations-placeholder" style="color: var(--ink-50); font-size: 0.9rem;">Loading recommendations...</div>
-            </div>
+          <p style="color: var(--ink-70); font-size: 1.05rem; line-height: 1.6; max-width: 480px; margin: 0 auto 2.5rem;">${t(feedbackKey)}</p>
+          <div style="margin-top: 2.5rem; text-align: left;">
+            <h3 style="font-family: var(--font-heading); font-size: 1.25rem; margin-bottom: 1rem; border-bottom: 1px solid var(--warm-2); padding-bottom: 0.5rem; color: var(--ink);">${t('quiz_recommended')}</h3>
+            <div class="quiz-recommended-list" id="quiz-rec-list"></div>
           </div>
-          
-          <div class="quiz-results-actions" style="margin-top: 3rem;">
-            <button class="btn btn-primary" id="btn-restart-quiz" data-magnetic style="border-radius:999px; font-size:0.8rem; padding: 0.9rem 2rem;">
-              ${t('quiz_restart')}
-            </button>
+          <div style="margin-top: 3rem; display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+            <button class="btn btn-primary" id="btn-restart-quiz" data-magnetic style="border-radius:999px; font-size:0.8rem; padding: 0.9rem 2rem;">${t('quiz_restart')}</button>
+            <button class="btn btn-ghost" id="btn-change-difficulty" data-magnetic style="border-radius:999px; font-size:0.8rem; padding: 0.9rem 2rem;">Change Difficulty</button>
           </div>
         </div>
       `;
 
-      // Populate recommendations list
-      const recList = wrapper.querySelector('.quiz-recommended-list');
+      const recList = document.getElementById('quiz-rec-list');
       if (recList) {
         const recHtml = recommendations.map(id => {
           const art = store.getById(id);
-          if (art) {
-            return `
-              <a href="#/article/${art.id}" class="quiz-rec-item" style="display:flex; align-items:center; gap:1rem; padding:0.9rem; border:1px solid var(--warm-2); margin-bottom:0.75rem; border-radius:8px; background:var(--white); transition: all 0.3s var(--ease-out); box-shadow: var(--shadow-xs);">
-                ${art.cover_image_url 
-                  ? `<img src="${art.cover_image_url}" alt="" style="width:64px; height:48px; object-fit:cover; border-radius:4px;">` 
-                  : `<div style="width:64px; height:48px; display:flex; align-items:center; justify-content:center; background:var(--crimson-10); border-radius:4px; font-weight:bold; color:var(--crimson); font-size:0.6rem;">CDL</div>`
-                }
-                <div style="flex:1;">
-                  <div style="font-weight:600; font-size:0.92rem; color:var(--ink); line-height: 1.35;">${art.title}</div>
-                  <div style="font-size:0.75rem; color:var(--crimson); text-transform:uppercase; letter-spacing:0.05em; margin-top:0.2rem; font-weight: 500;">${formatCategory(art.category)}</div>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--crimson)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              </a>
-            `;
-          }
-          return '';
+          if (!art) return '';
+          return `
+            <a href="#/article/${art.id}" class="quiz-rec-item" style="display:flex; align-items:center; gap:1rem; padding:0.9rem; border:1px solid var(--warm-2); margin-bottom:0.75rem; border-radius:8px; background:var(--white); transition: all 0.3s var(--ease-out); box-shadow: var(--shadow-xs); text-decoration:none;">
+              ${art.cover_image_url
+                ? `<img src="${art.cover_image_url}" alt="" style="width:64px; height:48px; object-fit:cover; border-radius:4px;">`
+                : `<div style="width:64px; height:48px; display:flex; align-items:center; justify-content:center; background:var(--crimson-10); border-radius:4px; font-weight:bold; color:var(--crimson); font-size:0.6rem;">CDL</div>`
+              }
+              <div style="flex:1;">
+                <div style="font-weight:600; font-size:0.92rem; color:var(--ink); line-height: 1.35;">${art.title}</div>
+                <div style="font-size:0.75rem; color:var(--crimson); text-transform:uppercase; letter-spacing:0.05em; margin-top:0.2rem; font-weight: 500;">${formatCategory(art.category)}</div>
+              </div>
+            </a>
+          `;
         }).join('');
-
-        if (recHtml.trim()) {
-          recList.innerHTML = recHtml;
-          
-          // Hover interactions
-          recList.querySelectorAll('.quiz-rec-item').forEach(item => {
-            item.addEventListener('mouseenter', () => {
-              item.style.borderColor = 'var(--crimson-30)';
-              item.style.transform = 'translateY(-2px)';
-              item.style.boxShadow = 'var(--shadow-md)';
-            });
-            item.addEventListener('mouseleave', () => {
-              item.style.borderColor = 'var(--warm-2)';
-              item.style.transform = 'translateY(0)';
-              item.style.boxShadow = 'var(--shadow-xs)';
-            });
-          });
-        } else {
-          recList.innerHTML = `<p style="color: var(--ink-50); font-size: 0.9rem;">Check out our full <a href="#/articles" style="color: var(--crimson); text-decoration: underline;">article archive</a> to explore more legal topics!</p>`;
-        }
+        recList.innerHTML = recHtml.trim() || `<p style="color: var(--ink-50); font-size: 0.9rem;">Check out our <a href="#/articles" style="color: var(--crimson);">article archive</a> for more!</p>`;
       }
 
       document.getElementById('btn-restart-quiz').addEventListener('click', () => {
-        currentStep = 0;
-        score = 0;
-        answers = [];
+        currentStep = 1; score = 0; answers = [];
+        renderQuestion();
+      });
+      document.getElementById('btn-change-difficulty').addEventListener('click', () => {
+        currentStep = 0; score = 0; answers = []; questions = [];
         renderWelcome();
       });
 
-      // Score count-up animation
       setTimeout(() => {
         const scoreNum = wrapper.querySelector('.quiz-score-num');
         if (scoreNum) {
@@ -966,12 +907,10 @@ export function QuizPage(store) {
       }, 100);
     };
 
-    // Store reference to store on window object for recommendations lookup
     window.__cdl_store = store;
-
-    // Start with welcome screen
     renderWelcome();
   }
 
   return { html, init };
 }
+

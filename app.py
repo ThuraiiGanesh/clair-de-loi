@@ -412,6 +412,18 @@ def get_admin_stats():
         'quiz_questions_total': quiz_count
     })
 
+# ─── DIAGNOSTIC API ────────────────────────────────────────────────
+@app.route('/api/diag', methods=['GET'])
+def get_diag():
+    key = os.environ.get('GEMINI_API_KEY')
+    return jsonify({
+        'key_configured': key is not None,
+        'key_length': len(key) if key else 0,
+        'key_start': key[:10] if key else '',
+        'key_end': key[-5:] if key else '',
+        'os_environ_has_key': 'GEMINI_API_KEY' in os.environ
+    })
+
 # ─── CHATBOT GEMINI PROXY API ──────────────────────────────────────
 def get_mock_reply(user_message):
     msg = user_message.lower()

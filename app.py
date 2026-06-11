@@ -30,13 +30,10 @@ if os.path.exists(env_path):
                 os.environ[key.strip()] = val.strip()
 
 # Gemini Config
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'AIzaSyAQ-Ab8RN6K75zzte1l2kc9XW13aipFMU5e_9z04x1gc5IzVJYAtZg')
-# Fallback support for both direct key and raw provided key
-if GEMINI_API_KEY and not GEMINI_API_KEY.startswith('AIzaSy'):
-    GEMINI_API_KEY = f"AIzaSy{GEMINI_API_KEY.replace('.', '-')}"
-
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 GEMINI_MODEL = 'gemini-2.5-flash'
-GEMINI_ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+GEMINI_ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY or ''}"
+print(f"DEBUG STARTUP: Loaded GEMINI_API_KEY={'Configured' if GEMINI_API_KEY else 'None'}...", flush=True)
 
 # ─── DATABASE CONNECTION ───────────────────────────────────────────
 def get_db():
@@ -473,7 +470,10 @@ def chatbot_proxy():
             return jsonify({'reply': reply})
             
     except Exception as e:
-        print(f"Chatbot server error: {e}. Falling back to offline mock reply.")
+        import traceback, sys
+        print(f"Chatbot server error: {e}. Falling back to offline mock reply.", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
+        sys.stderr.flush()
         user_message = ""
         try:
             if contents and len(contents) > 0:
